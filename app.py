@@ -1,3 +1,5 @@
+
+import os
 from flask import Flask, render_template, jsonify, request
 
 app = Flask(__name__)
@@ -10,16 +12,13 @@ def home():
 
 @app.route("/simulate", methods=["POST"])
 def simulate():
-
     data = request.get_json(silent=True) or {}
-
     activity = data.get("activity", "browsing")
 
     print("Activity:", activity)
 
     # Application Layer Events
     if activity == "browsing":
-
         application = [
             {
                 "protocol": "DNS",
@@ -161,9 +160,7 @@ def simulate():
             }
         ]
 
-
     elif activity == "mail":
-
         application = [
             {
                 "protocol": "SMTP",
@@ -270,9 +267,7 @@ def simulate():
             }
         ]
 
-
     else:
-
         application = [
             {
                 "protocol": "HTTP",
@@ -357,7 +352,6 @@ def simulate():
             }
         ]
 
-
     return jsonify({
         "activity": activity,
         "application": application,
@@ -367,8 +361,8 @@ def simulate():
 
 if __name__ == "__main__":
     app.run(
-        host="127.0.0.1",
-        port=5000,
-        debug=True
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 5000)),
+        debug=False
     )
 
