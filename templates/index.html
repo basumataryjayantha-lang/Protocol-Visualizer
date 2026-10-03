@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Computer Networks Assignment 2</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #eef2f7;
+        }
+
+        header {
+            background: #172554;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 35% 65%;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1400px;
+            margin: auto;
+        }
+
+        .panel {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px #0002;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            margin: 6px 0 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+
+        textarea {
+            height: 90px;
+        }
+
+        button {
+            background: #2563eb;
+            color: white;
+            border: 0;
+            padding: 10px 14px;
+            margin: 4px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        .tab {
+            background: #64748b;
+        }
+
+        .active {
+            background: #16a34a !important;
+        }
+
+        .status {
+            margin-top: 15px;
+            padding: 12px;
+            background: #ecfdf5;
+            color: #166534;
+            border-radius: 6px;
+        }
+
+        .card {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8fafc;
+            border-left: 6px solid #2563eb;
+            border-radius: 8px;
+        }
+
+        .tcp {
+            border-left-color: #16a34a;
+        }
+
+        .field {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        @media (max-width: 800px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>Computer Networks</h1>
+    <p>Application & Transport Layer Visualizer</p>
+</header>
+
+<div class="dashboard">
+
+    <!-- LEFT PANEL -->
+
+    <div class="panel">
+
+        <h2>Activity Panel</h2>
+
+        <h3>🌐 Browsing</h3>
+
+        <input id="url" value="example.com">
+
+        <button onclick="start('browsing')">
+            Visit
+        </button>
+
+        <hr>
+
+        <h3>📧 Mail</h3>
+
+        <input
+            id="to"
+            value="student@example.com"
+            placeholder="To"
+        >
+
+        <input
+            id="subject"
+            value="Computer Networks"
+            placeholder="Subject"
+        >
+
+        <textarea id="body">Hello from Computer Networks.</textarea>
+
+        <button onclick="start('mail')">
+            Send Mail
+        </button>
+
+        <hr>
+
+        <h3>🎬 Streaming</h3>
+
+        <select id="quality">
+            <option>360p</option>
+            <option>720p</option>
+            <option>1080p</option>
+        </select>
+
+        <br>
+
+        <button onclick="start('streaming')">
+            ▶ Play
+        </button>
+
+        <button onclick="pause()">
+            ⏸ Pause
+        </button>
+
+        <hr>
+
+        <h3>Simulation Controls</h3>
+
+        <button onclick="previousStep()">
+            ◀ Previous
+        </button>
+
+        <button onclick="play()">
+            ▶ Play
+        </button>
+
+        <button onclick="pause()">
+            ⏸ Pause
+        </button>
+
+        <button onclick="nextStep()">
+            Next ▶
+        </button>
+
+        <button onclick="replay()">
+            ↻ Replay
+        </button>
+
+        <div class="status">
+            <b>Status:</b>
+            <span id="status">
+                Select an activity to start.
+            </span>
+        </div>
+
+    </div>
+
+
+    <!-- RIGHT PANEL -->
+
+    <div class="panel">
+
+        <h2>Protocol Visualization</h2>
+
+        <button
+            id="appTab"
+            class="tab active"
+            onclick="showApplication()">
+            Application Layer
+        </button>
+
+        <button
+            id="tcpTab"
+            class="tab"
+            onclick="showTransport()">
+            Transport Layer
+        </button>
+
+        <h3 id="step">
+            Step 0
+        </h3>
+
+        <div id="output">
+
+            <div class="card">
+                <h2>Welcome</h2>
+                <p>
+                    Start Browsing, Mail, or Streaming.
+                </p>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+let application = [];
+let transport = [];
+
+let current = 0;
+let view = "application";
+let timer = null;
+
+
+// START ACTIVITY
+
+async function start(activity) {
+
+    pause();
+
+    current = 0;
+
+    document.getElementById("status").innerText =
+        "Starting " + activity + "...";
+
+    try {
+
+        const response = await fetch("/simulate", {
+
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                activity: activity
+            })
+
+        });
+
+        if (!response.ok) {
+            throw new Error(
+                "HTTP " + response.status
+            );
+        }
+
+        const data = await response.json();
+
+        application = data.application || [];
+        transport = data.transport || [];
+
+        document.getElementById("status").innerText =
+            activity.toUpperCase() +
+            " simulation started.";
+
+        render();
+
+    } catch (error) {
+
+        document.getElementById("status").innerText =
+            "ERROR: " + error.message;
+
+        console.error(error);
+    }
+}
+
+
+// APPLICATION TAB
+
+function showApplication() {
+
+    view = "application";
+
+    document
+        .getElementById("appTab")
+        .classList.add("active");
+
+    document
+        .getElementById("tcpTab")
+        .classList.remove("active");
+
+    render();
+}
+
+
+// TRANSPORT TAB
+
+function showTransport() {
+
+    view = "transport";
+
+    document
+        .getElementById("tcpTab")
+        .classList.add("active");
+
+    document
+        .getElementById("appTab")
+        .classList.remove("active");
+
+    render();
+}
+
+
+// RENDER
+
+function render() {
+
+    if (view === "application") {
+        renderApplication();
+    } else {
+        renderTransport();
+    }
+}
+
+
+// APPLICATION
+
+function renderApplication() {
+
+    if (application.length === 0) {
+
+        document.getElementById("output").innerHTML = `
+            <div class="card">
+                <h2>No Application Events</h2>
+                <p>Start an activity first.</p>
+            </div>
+        `;
+
+        return;
+    }
+
+    let i = Math.min(
+        current,
+        application.length - 1
+    );
+
+    let e = application[i];
+
+    document.getElementById("step").innerText =
+        "Application Step " +
+        (i + 1) +
+        " / " +
+        application.length;
+
+    document.getElementById("output").innerHTML = `
+
+        <div class="card">
+
+            <h2>${e.protocol}</h2>
+
+            <h3>${e.message}</h3>
+
+            <p>
+                <b>Direction:</b>
+                ${e.direction}
+            </p>
+
+            <p>
+                ${e.description}
+            </p>
+
+        </div>
+    `;
+}
+
+
+// TRANSPORT
+
+function renderTransport() {
+
+    if (transport.length === 0) {
+
+        document.getElementById("output").innerHTML = `
+            <div class="card">
+                <h2>No Transport Events</h2>
+                <p>Start an activity first.</p>
+            </div>
+        `;
+
+        return;
+    }
+
+    let i = Math.min(
+        current,
+        transport.length - 1
+    );
+
+    let e = transport[i];
+
+    document.getElementById("step").innerText =
+        "Transport Step " +
+        (i + 1) +
+        " / " +
+        transport.length;
+
+    document.getElementById("output").innerHTML = `
+
+        <div class="card tcp">
+
+            <h2>
+                TCP ${e.type}
+            </h2>
+
+            <p>
+                <b>Direction:</b>
+                ${e.direction}
+            </p>
+
+            <div class="field">
+                <b>Seq</b>
+                <span>${e.seq}</span>
+            </div>
+
+            <div class="field">
+                <b>Ack</b>
+                <span>${e.ack}</span>
+            </div>
+
+            <div class="field">
+                <b>Window</b>
+                <span>${e.window}</span>
+            </div>
+
+            <div class="field">
+                <b>Flags</b>
+                <span>${e.flags}</span>
+            </div>
+
+            <div class="field">
+                <b>Length</b>
+                <span>${e.length}</span>
+            </div>
+
+            <div class="field">
+                <b>TCP State</b>
+                <span>${e.state}</span>
+            </div>
+
+        </div>
+    `;
+}
+
+
+// NEXT
+
+function nextStep() {
+
+    let total = Math.max(
+        application.length,
+        transport.length
+    );
+
+    if (total === 0) {
+        return;
+    }
+
+    if (current < total - 1) {
+        current++;
+        render();
+    }
+}
+
+
+// PREVIOUS
+
+function previousStep() {
+
+    if (current > 0) {
+        current--;
+        render();
+    }
+}
+
+
+// PLAY
+
+function play() {
+
+    if (timer !== null) {
+        return;
+    }
+
+    let total = Math.max(
+        application.length,
+        transport.length
+    );
+
+    if (total === 0) {
+        return;
+    }
+
+    timer = setInterval(function() {
+
+        if (current >= total - 1) {
+            pause();
+            return;
+        }
+
+        current++;
+
+        render();
+
+    }, 1200);
+}
+
+
+// PAUSE
+
+function pause() {
+
+    if (timer !== null) {
+
+        clearInterval(timer);
+
+        timer = null;
+    }
+}
+
+
+// REPLAY
+
+function replay() {
+
+    pause();
+
+    current = 0;
+
+    render();
+}
+
+</script>
+
+</body>
+</html>
